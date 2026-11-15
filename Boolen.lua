@@ -2219,6 +2219,111 @@ function Boolean:Notify(cfg)
     end)
 end
 
+----------------------------------------------------------------------------------------------------
+-- v1 compatibility (CreateWindow / CreateTab / CreateButton ... still work)
+----------------------------------------------------------------------------------------------------
+
+local function decimalsOf(n)
+    local s = tostring(n or 1)
+    local dot = string.find(s, "%.")
+    return dot and (#s - dot) or 0
+end
+
+function Boolean:CreateWindow(cfg)
+    cfg = cfg or {}
+    return self:Window({
+        Title = cfg.Title or cfg.Name,
+        Size = cfg.Size or Vector2.new(420, 440),
+        Position = cfg.Position,
+        Accent = cfg.Accent,
+        Closable = cfg.Closable,
+        OnClose = cfg.OnClose,
+    })
+end
+
+function Window:CreateTab(name)
+    local first = not self._hasTab
+    self._hasTab = true
+    return self:Header(name, first)
+end
+
+function Window:Notify(cfg) Boolean:Notify(cfg) end
+function Window:SetToggleKey(key) Boolean:SetToggleKey(key) end
+function Window:Toggle(state) Boolean:Toggle(state) end
+function Window:Minimize(state)
+    if state == nil then state = not self.Collapsed end
+    self:SetCollapsed(state)
+end
+
+function Container:CreateSection(name)
+    self:Separator(name)
+end
+
+function Container:CreateButton(cfg)
+    cfg = cfg or {}
+    return self:Button(cfg.Name or "Button", cfg.Callback, { Tooltip = cfg.Description or cfg.Tooltip, Flag = cfg.Flag })
+end
+
+function Container:CreateToggle(cfg)
+    cfg = cfg or {}
+    return self:Checkbox(cfg.Name or "Toggle", cfg.Default, cfg.Callback, { Tooltip = cfg.Description or cfg.Tooltip, Flag = cfg.Flag })
+end
+
+function Container:CreateSlider(cfg)
+    cfg = cfg or {}
+    return self:Slider(cfg.Name or "Slider", {
+        Min = cfg.Min, Max = cfg.Max, Default = cfg.Default,
+        Step = cfg.Increment, Decimals = decimalsOf(cfg.Increment),
+        Suffix = cfg.Suffix, Tooltip = cfg.Description or cfg.Tooltip, Flag = cfg.Flag,
+    }, cfg.Callback)
+end
+
+function Container:CreateDropdown(cfg)
+    cfg = cfg or {}
+    return self:Combo(cfg.Name or "Dropdown", cfg.Options or {}, cfg.Default, cfg.Callback, {
+        Multi = cfg.Multi, Tooltip = cfg.Description or cfg.Tooltip, Flag = cfg.Flag,
+    })
+end
+
+function Container:CreateInput(cfg)
+    cfg = cfg or {}
+    return self:Input(cfg.Name or "Input", {
+        Placeholder = cfg.Placeholder, Default = cfg.Default,
+        ClearOnSubmit = cfg.ClearOnFocusLost, Numeric = cfg.NumbersOnly,
+        Tooltip = cfg.Description or cfg.Tooltip, Flag = cfg.Flag,
+    }, cfg.Callback)
+end
+
+function Container:CreateKeybind(cfg)
+    cfg = cfg or {}
+    return self:Keybind(cfg.Name or "Keybind", cfg.Default, cfg.Callback, {
+        Changed = cfg.Changed, Tooltip = cfg.Description or cfg.Tooltip, Flag = cfg.Flag,
+    })
+end
+
+function Container:CreateColorPicker(cfg)
+    cfg = cfg or {}
+    return self:ColorEdit(cfg.Name or "Color", cfg.Default, cfg.Callback, {
+        Tooltip = cfg.Description or cfg.Tooltip, Flag = cfg.Flag,
+    })
+end
+
+function Container:CreateLabel(text)
+    return self:Text(text or "", { Dim = true })
+end
+
+function Container:CreateParagraph(cfg)
+    cfg = cfg or {}
+    local t = self:Text(cfg.Title or "")
+    local c = self:Text(cfg.Content or "", { Dim = true })
+    return {
+        Set = function(_, n)
+            if n.Title then t:Set(n.Title) end
+            if n.Content then c:Set(n.Content) end
+        end,
+    }
+end
+
 function Boolean:Destroy()
     for i = #self.Windows, 1, -1 do self.Windows[i]:Destroy() end
     for _, c in ipairs(State.Conns) do pcall(function() c:Disconnect() end) end
